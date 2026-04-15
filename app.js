@@ -12,7 +12,18 @@ const TAP_BURST_TAPS_MAX = 9;
 const SLEEP_DURATION_MS = 3000;
 
 let audioCtx = null;
-let fallbackTapAudio = null;
+let fallbackTapAudios = null;
+let lastTapSoundIndex = -1;
+
+const TAP_SOUND_VARIANTS = [
+  { osc: "sine", f1: 330, d1: 0.07, f2: 470, d2: 0.09, gap: 0.048, glide: 1.18 },
+  { osc: "triangle", f1: 360, d1: 0.06, f2: 540, d2: 0.09, gap: 0.05, glide: 1.22 },
+  { osc: "sine", f1: 390, d1: 0.07, f2: 620, d2: 0.085, gap: 0.052, glide: 1.25 },
+  { osc: "triangle", f1: 310, d1: 0.075, f2: 450, d2: 0.1, gap: 0.045, glide: 1.16 },
+  { osc: "sine", f1: 420, d1: 0.06, f2: 560, d2: 0.095, gap: 0.05, glide: 1.2 },
+  { osc: "triangle", f1: 345, d1: 0.065, f2: 505, d2: 0.09, gap: 0.055, glide: 1.19 },
+  { osc: "sine", f1: 370, d1: 0.075, f2: 520, d2: 0.1, gap: 0.047, glide: 1.17 }
+];
 
 function getAudioContext() {
   if (!audioCtx) {
@@ -57,13 +68,31 @@ function encodeWavPcm16({ sampleRate, samples }) {
   return new Blob([buffer], { type: "audio/wav" });
 }
 
-function getFallbackTapAudio() {
-  if (fallbackTapAudio) {
-    return fallbackTapAudio;
+function chooseTapSoundIndex() {
+  if (TAP_SOUND_VARIANTS.length <= 1) {
+    lastTapSoundIndex = 0;
+    return 0;
   }
 
+  let idx = Math.floor(Math.random() * TAP_SOUND_VARIANTS.length);
+  if (idx === lastTapSoundIndex) {
+    idx = (idx + 1 + Math.floor(Math.random() * (TAP_SOUND_VARIANTS.length - 1))) % TAP_SOUND_VARIANTS.length;
+  }
+  lastTapSoundIndex = idx;
+  return idx;
+}
+
+function getFallbackTapAudio(variantIndex) {
+  if (!fallbackTapAudios) {
+    fallbackTapAudios = new Array(TAP_SOUND_VARIANTS.length).fill(null);
+  }
+  if (fallbackTapAudios[variantIndex]) {
+    return fallbackTapAudios[variantIndex];
+  }
+
+  const variant = TAP_SOUND_VARIANTS[variantIndex];
   const sampleRate = 22050;
-  const durationSec = 0.22;
+  const durationSec = 0.24;
   const total = Math.floor(sampleRate * durationSec);
   const samples = new Float32Array(total);
 
@@ -73,24 +102,35 @@ function getFallbackTapAudio() {
     return Math.max(0, 1 - (t - a) / d);
   }
 
+  function wave(type, phase) {
+    if (type === "triangle") {
+      const x = phase - Math.floor(phase + 0.5);
+      return 4 * Math.abs(x) - 1;
+    }
+    return Math.sin(2 * Math.PI * phase);
+  }
+
   for (let i = 0; i < total; i += 1) {
     const t = i / sampleRate;
-    const boop1 = Math.sin(2 * Math.PI * 380 * t) * env(t, 0.01, 0.07);
-    const boop2 = Math.sin(2 * Math.PI * 520 * (t - 0.05)) * env(t - 0.05, 0.01, 0.09);
-    samples[i] = (boop1 + boop2) * 0.25;
+    const b1 = wave(variant.osc, variant.f1 * t) * env(t, 0.01, variant.d1);
+    const t2 = t - variant.gap;
+    const b2 = wave(variant.osc, variant.f2 * t2) * env(t2, 0.01, variant.d2);
+    samples[i] = (b1 + b2) * 0.22;
   }
 
   const wavBlob = encodeWavPcm16({ sampleRate, samples });
   const url = URL.createObjectURL(wavBlob);
   const audio = new Audio(url);
   audio.preload = "auto";
-  fallbackTapAudio = audio;
+  fallbackTapAudios[variantIndex] = audio;
   return audio;
 }
 
 function playSnailTapSound() {
   // Must stay gesture-synchronous on mobile: no awaits, no timers.
   let didStart = false;
+  const variantIndex = chooseTapSoundIndex();
+  const variant = TAP_SOUND_VARIANTS[variantIndex];
 
   try {
     const ctx = getAudioContext();
@@ -108,9 +148,9 @@ function playSnailTapSound() {
       function boop(start, freqHz, duration) {
         const osc = ctx.createOscillator();
         const g = ctx.createGain();
-        osc.type = "sine";
+        osc.type = variant.osc;
         osc.frequency.setValueAtTime(freqHz, start);
-        osc.frequency.exponentialRampToValueAtTime(freqHz * 1.22, start + duration * 0.35);
+        osc.frequency.exponentialRampToValueAtTime(freqHz * variant.glide, start + duration * 0.35);
         g.gain.setValueAtTime(0.0001, start);
         g.gain.exponentialRampToValueAtTime(1, start + 0.012);
         g.gain.exponentialRampToValueAtTime(0.0001, start + duration);
@@ -120,8 +160,8 @@ function playSnailTapSound() {
         osc.stop(start + duration + 0.03);
       }
 
-      boop(t0, 380, 0.072);
-      boop(t0 + 0.05, 520, 0.095);
+      boop(t0, variant.f1, variant.d1);
+      boop(t0 + variant.gap, variant.f2, variant.d2);
 
       master.gain.setValueAtTime(0.14, t0 + 0.2);
       master.gain.linearRampToValueAtTime(0.0001, t0 + 0.24);
@@ -136,7 +176,7 @@ function playSnailTapSound() {
   }
 
   try {
-    const audio = getFallbackTapAudio();
+    const audio = getFallbackTapAudio(variantIndex);
     audio.currentTime = 0;
     void audio.play();
   } catch {
