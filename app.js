@@ -126,6 +126,39 @@ function addLightningSegment(
   trail.addEventListener("animationend", () => trail.remove(), { once: true });
 }
 
+function spawnCrackleSparks(
+  centerX,
+  centerY,
+  {
+    count = 4,
+    spread = 34,
+    durationMin = 120,
+    durationJitter = 140,
+    sizeMin = 2.6,
+    sizeJitter = 2.1
+  } = {}
+) {
+  for (let i = 0; i < count; i += 1) {
+    const angle = Math.random() * Math.PI * 2;
+    const distance = 7 + Math.random() * spread;
+    const dx = Math.cos(angle) * distance;
+    const dy = Math.sin(angle) * distance;
+
+    const spark = document.createElement("div");
+    spark.className = "spark";
+    spark.style.left = `${centerX}px`;
+    spark.style.top = `${centerY}px`;
+    spark.style.setProperty("--spark-dx", `${dx}px`);
+    spark.style.setProperty("--spark-dy", `${dy}px`);
+    spark.style.setProperty("--spark-size", `${sizeMin + Math.random() * sizeJitter}px`);
+    spark.style.setProperty("--spark-duration", `${durationMin + Math.random() * durationJitter}ms`);
+    spark.style.setProperty("--spark-delay", `${Math.floor(Math.random() * 50)}ms`);
+    spark.style.setProperty("--spark-hue", `${36 + Math.floor(Math.random() * 20)}deg`);
+    effectsEl.append(spark);
+    spark.addEventListener("animationend", () => spark.remove(), { once: true });
+  }
+}
+
 function spawnLightTrail(fromX, fromY, toX, toY) {
   const fromCenterX = fromX + SNAIL_SIZE / 2;
   const fromCenterY = fromY + SNAIL_SIZE / 2;
@@ -213,6 +246,17 @@ function spawnTrailSegment(fromX, fromY, toX, toY) {
       branch: true
     });
   }
+
+  if (Math.random() < 0.2) {
+    spawnCrackleSparks(toCenterX, toCenterY, {
+      count: 1,
+      spread: 16,
+      durationMin: 90,
+      durationJitter: 70,
+      sizeMin: 1.8,
+      sizeJitter: 1.6
+    });
+  }
 }
 
 function spawnImpactFlash(toX, toY) {
@@ -225,6 +269,22 @@ function spawnImpactFlash(toX, toY) {
   impact.style.top = `${toCenterY - 10}px`;
   effectsEl.append(impact);
   impact.addEventListener("animationend", () => impact.remove(), { once: true });
+
+  spawnCrackleSparks(toCenterX, toCenterY, {
+    count: 7,
+    spread: 44,
+    durationMin: 140,
+    durationJitter: 170,
+    sizeMin: 2.7,
+    sizeJitter: 2.3
+  });
+}
+
+function spawnScreenFlash() {
+  const flash = document.createElement("div");
+  flash.className = "screen-flash";
+  effectsEl.append(flash);
+  flash.addEventListener("animationend", () => flash.remove(), { once: true });
 }
 
 function setStatus(text) {
@@ -268,7 +328,16 @@ function dashToRandomEdge() {
   const dashDirection = normalize(target.x - startX, target.y - startY);
   setHeading(dashDirection.x, dashDirection.y);
 
+  spawnScreenFlash();
   spawnLightTrail(startX, startY, target.x, target.y);
+  spawnCrackleSparks(startX + SNAIL_SIZE / 2, startY + SNAIL_SIZE / 2, {
+    count: 4,
+    spread: 26,
+    durationMin: 100,
+    durationJitter: 95,
+    sizeMin: 2,
+    sizeJitter: 1.8
+  });
   setStatus("Wheee! Light-speed snail!");
 
   const dashStartedAt = performance.now();
