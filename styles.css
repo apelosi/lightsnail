@@ -1,0 +1,195 @@
+:root {
+  color-scheme: light;
+  --bg-1: #fef5db;
+  --bg-2: #f8d9ff;
+  --stage-1: #fff8ed;
+  --stage-2: #ffecf7;
+  --ink: #403042;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: "Inter", "Avenir Next", "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: linear-gradient(160deg, var(--bg-1), var(--bg-2));
+}
+
+.app-shell {
+  min-height: 100dvh;
+  padding: 1rem;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 0.8rem;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 1.6rem;
+  line-height: 1.1;
+}
+
+.app-header p {
+  margin: 0.35rem 0 0;
+  font-size: 0.94rem;
+  opacity: 0.85;
+}
+
+.stage {
+  position: relative;
+  width: 100%;
+  min-height: 62dvh;
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-radius: 1.1rem;
+  overflow: hidden;
+  background: radial-gradient(circle at 30% 20%, var(--stage-1), var(--stage-2));
+  box-shadow: 0 8px 22px rgba(78, 32, 92, 0.14);
+  touch-action: manipulation;
+}
+
+.effects {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.light-trail {
+  position: absolute;
+  height: 9px;
+  border-radius: 999px;
+  transform-origin: 0 50%;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0),
+    rgba(255, 255, 255, 0.95),
+    rgba(255, 248, 170, 0.72),
+    rgba(255, 255, 255, 0)
+  );
+  box-shadow:
+    0 0 8px rgba(255, 252, 216, 0.9),
+    0 0 18px rgba(255, 255, 255, 0.8);
+  animation: light-fade 430ms ease-out forwards;
+}
+
+.impact-flash {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 18px 10px rgba(255, 255, 255, 0.6);
+  animation: impact-fade 350ms ease-out forwards;
+}
+
+.snail {
+  --x: 0px;
+  --y: 0px;
+  --flip: 1;
+  position: absolute;
+  z-index: 3;
+  left: 0;
+  top: 0;
+  width: 62px;
+  height: 62px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  transform: translate(var(--x), var(--y));
+  touch-action: manipulation;
+}
+
+.snail-face {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 2.5rem;
+  line-height: 1;
+  user-select: none;
+  transform: scaleX(var(--flip));
+  transform-origin: center;
+  animation: snail-bob 1100ms ease-in-out infinite;
+  filter: drop-shadow(0 4px 3px rgba(90, 72, 46, 0.24));
+}
+
+.snail.is-sleeping {
+  cursor: default;
+}
+
+.snail.is-sleeping .snail-face {
+  animation-play-state: paused;
+  opacity: 0.78;
+}
+
+.sleep-bubble {
+  position: absolute;
+  top: -3px;
+  right: -5px;
+  font-size: 1.05rem;
+  opacity: 0;
+  transform: translateY(5px);
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.snail.is-sleeping .sleep-bubble {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.status-text {
+  margin: 0;
+  font-size: 0.92rem;
+  min-height: 1.25rem;
+}
+
+@keyframes snail-bob {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -1px;
+  }
+}
+
+@keyframes light-fade {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes impact-fade {
+  0% {
+    opacity: 0.95;
+    scale: 1;
+  }
+  100% {
+    opacity: 0;
+    scale: 2.4;
+  }
+}
+
+@media (min-width: 640px) {
+  .app-shell {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 1.2rem 1.2rem 1.5rem;
+  }
+
+  .stage {
+    min-height: 68dvh;
+  }
+}
