@@ -10,6 +10,53 @@ const TAP_WINDOW_MS = 1300;
 const TAP_BURST_THRESHOLD = 3;
 const SLEEP_DURATION_MS = 3000;
 
+let audioCtx = null;
+
+function getAudioContext() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  return audioCtx;
+}
+
+/** Soft rising “boop-boop” for each tap — short, snail-cute, no audio file needed. */
+function playSnailTapSound() {
+  try {
+    const ctx = getAudioContext();
+    if (ctx.state === "suspended") {
+      void ctx.resume();
+    }
+
+    const t0 = ctx.currentTime;
+    const master = ctx.createGain();
+    master.gain.value = 0.14;
+    master.connect(ctx.destination);
+
+    function boop(start, freqHz, duration) {
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freqHz, start);
+      osc.frequency.exponentialRampToValueAtTime(freqHz * 1.22, start + duration * 0.35);
+      g.gain.setValueAtTime(0.0001, start);
+      g.gain.exponentialRampToValueAtTime(1, start + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+      osc.connect(g);
+      g.connect(master);
+      osc.start(start);
+      osc.stop(start + duration + 0.03);
+    }
+
+    boop(t0, 380, 0.072);
+    boop(t0 + 0.05, 520, 0.095);
+
+    master.gain.setValueAtTime(0.14, t0 + 0.2);
+    master.gain.linearRampToValueAtTime(0.0001, t0 + 0.24);
+  } catch {
+    // Web Audio may be unavailable; ignore.
+  }
+}
+
 const state = {
   x: 0,
   y: 0,
@@ -378,6 +425,8 @@ function registerTap() {
   if (state.sleeping) {
     return;
   }
+
+  playSnailTapSound();
 
   const now = performance.now();
   state.tapTimes = state.tapTimes.filter((time) => now - time <= TAP_WINDOW_MS);
