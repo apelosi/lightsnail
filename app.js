@@ -99,11 +99,48 @@ function spawnLightTrail(fromX, fromY, toX, toY) {
   const trail = document.createElement("div");
   trail.className = "light-trail";
   trail.style.left = `${fromCenterX}px`;
-  trail.style.top = `${fromCenterY - 4.5}px`;
+  trail.style.top = `${fromCenterY - 6}px`;
   trail.style.width = `${distance}px`;
   trail.style.transform = `rotate(${angleDeg}deg)`;
+  trail.style.setProperty("--trail-duration", "500ms");
+  trail.style.setProperty("--trail-opacity", "0.95");
+  trail.style.setProperty("--trail-thickness", "15px");
   effectsEl.append(trail);
   trail.addEventListener("animationend", () => trail.remove(), { once: true });
+}
+
+function spawnTrailSegment(fromX, fromY, toX, toY) {
+  const fromCenterX = fromX + SNAIL_SIZE / 2;
+  const fromCenterY = fromY + SNAIL_SIZE / 2;
+  const toCenterX = toX + SNAIL_SIZE / 2;
+  const toCenterY = toY + SNAIL_SIZE / 2;
+
+  const dx = toCenterX - fromCenterX;
+  const dy = toCenterY - fromCenterY;
+  const distance = Math.hypot(dx, dy);
+
+  if (distance < 1.5) {
+    return;
+  }
+
+  const angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
+
+  const trail = document.createElement("div");
+  trail.className = "light-trail";
+  trail.style.left = `${fromCenterX}px`;
+  trail.style.top = `${fromCenterY - 5}px`;
+  trail.style.width = `${distance + 10}px`;
+  trail.style.transform = `rotate(${angleDeg}deg)`;
+  trail.style.setProperty("--trail-duration", "680ms");
+  trail.style.setProperty("--trail-opacity", "1");
+  trail.style.setProperty("--trail-thickness", "10px");
+  effectsEl.append(trail);
+  trail.addEventListener("animationend", () => trail.remove(), { once: true });
+}
+
+function spawnImpactFlash(toX, toY) {
+  const toCenterX = toX + SNAIL_SIZE / 2;
+  const toCenterY = toY + SNAIL_SIZE / 2;
 
   const impact = document.createElement("div");
   impact.className = "impact-flash";
@@ -158,6 +195,8 @@ function dashToRandomEdge() {
   setStatus("Wheee! Light-speed snail!");
 
   const dashStartedAt = performance.now();
+  let previousX = startX;
+  let previousY = startY;
 
   function dashStep(now) {
     if (!state.dashing || state.sleeping) {
@@ -170,6 +209,9 @@ function dashToRandomEdge() {
 
     state.x = startX + (target.x - startX) * eased;
     state.y = startY + (target.y - startY) * eased;
+    spawnTrailSegment(previousX, previousY, state.x, state.y);
+    previousX = state.x;
+    previousY = state.y;
     renderSnail();
 
     if (progress < 1) {
@@ -178,6 +220,7 @@ function dashToRandomEdge() {
     }
 
     state.dashing = false;
+    spawnImpactFlash(target.x, target.y);
     randomizeWanderSlightly();
     setStatus("Slow and shiny.");
   }
@@ -250,6 +293,7 @@ function initialize() {
 
 snailEl.addEventListener("pointerdown", (event) => {
   event.preventDefault();
+  snailEl.blur();
   registerTap();
 });
 
