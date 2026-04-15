@@ -85,6 +85,47 @@ function pickRandomEdgePoint() {
   return { x: 0, y: Math.random() * maxY };
 }
 
+function addLightningSegment(
+  fromCenterX,
+  fromCenterY,
+  toCenterX,
+  toCenterY,
+  {
+    durationMs = 520,
+    thickness = 10,
+    opacity = 1,
+    widthBoost = 0,
+    branch = false
+  } = {}
+) {
+  const dx = toCenterX - fromCenterX;
+  const dy = toCenterY - fromCenterY;
+  const distance = Math.hypot(dx, dy);
+
+  if (distance < 1.2) {
+    return;
+  }
+
+  const angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
+  const jitterDeg = (Math.random() - 0.5) * (branch ? 18 : 10);
+
+  const trail = document.createElement("div");
+  trail.className = "light-trail";
+  if (branch) {
+    trail.classList.add("light-trail--branch");
+  }
+  trail.style.left = `${fromCenterX}px`;
+  trail.style.top = `${fromCenterY - thickness / 2}px`;
+  trail.style.width = `${distance + widthBoost}px`;
+  trail.style.transform = `rotate(${angleDeg + jitterDeg}deg)`;
+  trail.style.setProperty("--trail-duration", `${durationMs}ms`);
+  trail.style.setProperty("--trail-opacity", String(opacity));
+  trail.style.setProperty("--trail-thickness", `${thickness}px`);
+  trail.style.setProperty("--flicker-delay", `${Math.floor(Math.random() * 90)}ms`);
+  effectsEl.append(trail);
+  trail.addEventListener("animationend", () => trail.remove(), { once: true });
+}
+
 function spawnLightTrail(fromX, fromY, toX, toY) {
   const fromCenterX = fromX + SNAIL_SIZE / 2;
   const fromCenterY = fromY + SNAIL_SIZE / 2;
@@ -94,19 +135,48 @@ function spawnLightTrail(fromX, fromY, toX, toY) {
   const dx = toCenterX - fromCenterX;
   const dy = toCenterY - fromCenterY;
   const distance = Math.hypot(dx, dy);
-  const angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
 
-  const trail = document.createElement("div");
-  trail.className = "light-trail";
-  trail.style.left = `${fromCenterX}px`;
-  trail.style.top = `${fromCenterY - 6}px`;
-  trail.style.width = `${distance}px`;
-  trail.style.transform = `rotate(${angleDeg}deg)`;
-  trail.style.setProperty("--trail-duration", "500ms");
-  trail.style.setProperty("--trail-opacity", "0.95");
-  trail.style.setProperty("--trail-thickness", "15px");
-  effectsEl.append(trail);
-  trail.addEventListener("animationend", () => trail.remove(), { once: true });
+  addLightningSegment(fromCenterX, fromCenterY, toCenterX, toCenterY, {
+    durationMs: 460,
+    thickness: 13,
+    opacity: 1,
+    widthBoost: 6
+  });
+
+  // A couple of offset strike lines make the trail read as electric, not smoky.
+  for (let i = 0; i < 2; i += 1) {
+    const offset = (Math.random() - 0.5) * 16;
+    addLightningSegment(
+      fromCenterX,
+      fromCenterY + offset * 0.12,
+      toCenterX,
+      toCenterY + offset * 0.12,
+      {
+        durationMs: 420 + Math.random() * 80,
+        thickness: 8 + Math.random() * 2,
+        opacity: 0.86,
+        widthBoost: 2
+      }
+    );
+  }
+
+  if (distance > 24) {
+    const branchAnchor = 0.42 + Math.random() * 0.2;
+    const branchStartX = fromCenterX + dx * branchAnchor;
+    const branchStartY = fromCenterY + dy * branchAnchor;
+    const branchLength = Math.min(85, distance * (0.25 + Math.random() * 0.18));
+    const direction = Math.atan2(dy, dx);
+    const branchAngle = direction + (Math.random() < 0.5 ? -1 : 1) * (0.65 + Math.random() * 0.45);
+    const branchEndX = branchStartX + Math.cos(branchAngle) * branchLength;
+    const branchEndY = branchStartY + Math.sin(branchAngle) * branchLength;
+
+    addLightningSegment(branchStartX, branchStartY, branchEndX, branchEndY, {
+      durationMs: 360,
+      thickness: 6.5,
+      opacity: 0.92,
+      branch: true
+    });
+  }
 }
 
 function spawnTrailSegment(fromX, fromY, toX, toY) {
@@ -123,19 +193,26 @@ function spawnTrailSegment(fromX, fromY, toX, toY) {
     return;
   }
 
-  const angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
+  addLightningSegment(fromCenterX, fromCenterY, toCenterX, toCenterY, {
+    durationMs: 560,
+    thickness: 8.5 + Math.random() * 2.5,
+    opacity: 1,
+    widthBoost: 10
+  });
 
-  const trail = document.createElement("div");
-  trail.className = "light-trail";
-  trail.style.left = `${fromCenterX}px`;
-  trail.style.top = `${fromCenterY - 5}px`;
-  trail.style.width = `${distance + 10}px`;
-  trail.style.transform = `rotate(${angleDeg}deg)`;
-  trail.style.setProperty("--trail-duration", "680ms");
-  trail.style.setProperty("--trail-opacity", "1");
-  trail.style.setProperty("--trail-thickness", "10px");
-  effectsEl.append(trail);
-  trail.addEventListener("animationend", () => trail.remove(), { once: true });
+  if (distance > 11 && Math.random() < 0.35) {
+    const branchLength = Math.max(10, distance * (0.32 + Math.random() * 0.22));
+    const heading = Math.atan2(dy, dx);
+    const branchHeading = heading + (Math.random() < 0.5 ? -1 : 1) * (0.52 + Math.random() * 0.5);
+    const branchEndX = fromCenterX + Math.cos(branchHeading) * branchLength;
+    const branchEndY = fromCenterY + Math.sin(branchHeading) * branchLength;
+    addLightningSegment(fromCenterX, fromCenterY, branchEndX, branchEndY, {
+      durationMs: 340,
+      thickness: 6,
+      opacity: 0.9,
+      branch: true
+    });
+  }
 }
 
 function spawnImpactFlash(toX, toY) {
