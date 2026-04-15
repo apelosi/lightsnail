@@ -1,0 +1,296 @@
+:root {
+  color-scheme: light;
+  --bg-1: #fef5db;
+  --bg-2: #f8d9ff;
+  --stage-1: #fff8ed;
+  --stage-2: #ffecf7;
+  --ink: #403042;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: "Inter", "Avenir Next", "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: linear-gradient(160deg, var(--bg-1), var(--bg-2));
+}
+
+.app-shell {
+  min-height: 100dvh;
+  padding: 1rem;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 0.8rem;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 1.6rem;
+  line-height: 1.1;
+}
+
+.app-header p {
+  margin: 0.35rem 0 0;
+  font-size: 0.94rem;
+  opacity: 0.85;
+}
+
+.stage {
+  position: relative;
+  width: 100%;
+  min-height: 62dvh;
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-radius: 1.1rem;
+  overflow: hidden;
+  background: radial-gradient(circle at 30% 20%, var(--stage-1), var(--stage-2));
+  box-shadow: 0 8px 22px rgba(78, 32, 92, 0.14);
+  touch-action: manipulation;
+}
+
+.effects {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.screen-flash {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 55%, rgba(255, 245, 188, 0.42) 0%, rgba(255, 181, 67, 0.26) 43%, rgba(255, 181, 67, 0) 76%),
+    linear-gradient(115deg, rgba(255, 242, 170, 0) 0%, rgba(255, 226, 126, 0.32) 48%, rgba(255, 153, 58, 0) 100%);
+  mix-blend-mode: screen;
+  animation: screen-flash 120ms ease-out forwards;
+}
+
+.light-trail {
+  position: absolute;
+  --trail-duration: 650ms;
+  --trail-opacity: 1;
+  --trail-thickness: 9px;
+  --bolt-wobble: 0deg;
+  --bolt-skew: 0deg;
+  --bolt-width: 100%;
+  height: var(--trail-thickness);
+  border-radius: 3px;
+  transform-origin: 0 50%;
+  width: var(--bolt-width);
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, #fff3a9 16%, #ffd638 42%, #ffad15 72%, rgba(255, 255, 255, 0) 100%);
+  opacity: var(--trail-opacity);
+  box-shadow:
+    0 0 8px rgba(255, 245, 160, 0.95),
+    0 0 20px rgba(255, 184, 44, 0.9),
+    0 0 36px rgba(255, 116, 0, 0.75);
+  transform: rotate(var(--bolt-wobble)) skewX(var(--bolt-skew));
+  animation: bolt-fade var(--trail-duration) ease-out forwards;
+}
+
+.light-trail::after {
+  content: "";
+  position: absolute;
+  inset: -2px 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, #fffce2 38%, rgba(255, 255, 255, 0) 100%);
+  filter: blur(1.2px);
+  opacity: 0.72;
+}
+
+.light-trail::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 1px solid rgba(255, 242, 170, 0.75);
+  opacity: 0.7;
+  animation: bolt-flicker 95ms steps(2, end) infinite;
+}
+
+.spark {
+  position: absolute;
+  --spark-dx: 0px;
+  --spark-dy: 0px;
+  --spark-size: 3px;
+  --spark-duration: 180ms;
+  --spark-delay: 0ms;
+  --spark-hue: 44deg;
+  width: var(--spark-size);
+  height: var(--spark-size);
+  border-radius: 999px;
+  background: hsl(var(--spark-hue) 100% 62%);
+  box-shadow:
+    0 0 5px hsl(var(--spark-hue) 100% 70% / 0.9),
+    0 0 12px hsl(calc(var(--spark-hue) - 12deg) 100% 56% / 0.85);
+  animation: spark-burst var(--spark-duration) ease-out var(--spark-delay) forwards;
+}
+
+.impact-flash {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: radial-gradient(circle, #fff9cf 0%, #ffd34a 54%, #ff9e18 82%, rgba(255, 158, 24, 0) 100%);
+  box-shadow:
+    0 0 14px 6px rgba(255, 220, 79, 0.75),
+    0 0 28px 14px rgba(255, 140, 31, 0.52);
+  animation: impact-fade 420ms ease-out forwards;
+}
+
+.snail {
+  --x: 0px;
+  --y: 0px;
+  --flip: 1;
+  position: absolute;
+  z-index: 3;
+  left: 0;
+  top: 0;
+  width: 62px;
+  height: 62px;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  transform: translate(var(--x), var(--y));
+  touch-action: manipulation;
+}
+
+.snail:focus,
+.snail:focus-visible,
+.snail:active {
+  outline: none;
+  box-shadow: none;
+}
+
+.snail-face {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 2.5rem;
+  line-height: 1;
+  user-select: none;
+  transform: scaleX(var(--flip));
+  transform-origin: center;
+  animation: snail-bob 1100ms ease-in-out infinite;
+  filter: drop-shadow(0 4px 3px rgba(90, 72, 46, 0.24));
+}
+
+.snail.is-sleeping {
+  cursor: default;
+}
+
+.snail.is-sleeping .snail-face {
+  animation-play-state: paused;
+  opacity: 0.78;
+}
+
+.sleep-bubble {
+  position: absolute;
+  top: -3px;
+  right: -5px;
+  font-size: 1.05rem;
+  opacity: 0;
+  transform: translateY(5px);
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.snail.is-sleeping .sleep-bubble {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.status-text {
+  margin: 0;
+  font-size: 0.92rem;
+  min-height: 1.25rem;
+}
+
+@keyframes snail-bob {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -1px;
+  }
+}
+
+@keyframes bolt-fade {
+  0% {
+    opacity: 1;
+    filter: brightness(1.25);
+  }
+  65% {
+    opacity: 0.7;
+    filter: brightness(1.05);
+  }
+  100% {
+    opacity: 0;
+    filter: brightness(0.88);
+  }
+}
+
+@keyframes bolt-flicker {
+  0% {
+    opacity: 0.78;
+  }
+  100% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes screen-flash {
+  0% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes spark-burst {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--spark-dx)), calc(-50% + var(--spark-dy))) scale(0.25);
+  }
+}
+
+@keyframes impact-fade {
+  0% {
+    opacity: 0.98;
+    scale: 1;
+  }
+  100% {
+    opacity: 0;
+    scale: 3;
+  }
+}
+
+@media (min-width: 640px) {
+  .app-shell {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 1.2rem 1.2rem 1.5rem;
+  }
+
+  .stage {
+    min-height: 68dvh;
+  }
+}

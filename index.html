@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Light Snail</title>
+    <meta
+      name="description"
+      content="A tiny mobile-first web toy where a cute snail slowly crawls around and zips away when tapped."
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="app-header">
+        <h1>Light Snail</h1>
+        <p>Tap the snail to make it zip with a light flash.</p>
+      </header>
+
+      <main id="stage" class="stage" aria-label="Snail playground">
+        <div id="effects" class="effects" aria-hidden="true"></div>
+
+        <button id="snail" class="snail" type="button" aria-label="Tap the snail">
+          <span class="snail-face">🐌</span>
+          <span class="sleep-bubble" aria-hidden="true">💤</span>
+        </button>
+      </main>
+
+      <p id="status" class="status-text" aria-live="polite">Slow and shiny.</p>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
