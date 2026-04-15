@@ -12,6 +12,7 @@ const TAP_BURST_TAPS_MAX = 9;
 const SLEEP_DURATION_MS = 3000;
 
 let audioCtx = null;
+let fallbackTapAudio = null;
 
 function getAudioContext() {
   if (!audioCtx) {
@@ -21,40 +22,125 @@ function getAudioContext() {
 }
 
 /** Soft rising “boop-boop” for each tap — short, snail-cute, no audio file needed. */
+function encodeWavPcm16({ sampleRate, samples }) {
+  const dataSize = samples.length * 2;
+  const buffer = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(buffer);
+
+  function writeAscii(offset, text) {
+    for (let i = 0; i < text.length; i += 1) {
+      view.setUint8(offset + i, text.charCodeAt(i));
+    }
+  }
+
+  writeAscii(0, "RIFF");
+  view.setUint32(4, 36 + dataSize, true);
+  writeAscii(8, "WAVE");
+  writeAscii(12, "fmt ");
+  view.setUint32(16, 16, true); // PCM chunk size
+  view.setUint16(20, 1, true); // PCM format
+  view.setUint16(22, 1, true); // mono
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true); // byte rate
+  view.setUint16(32, 2, true); // block align
+  view.setUint16(34, 16, true); // bits per sample
+  writeAscii(36, "data");
+  view.setUint32(40, dataSize, true);
+
+  let offset = 44;
+  for (let i = 0; i < samples.length; i += 1) {
+    const s = Math.max(-1, Math.min(1, samples[i]));
+    view.setInt16(offset, Math.round(s * 0x7fff), true);
+    offset += 2;
+  }
+
+  return new Blob([buffer], { type: "audio/wav" });
+}
+
+function getFallbackTapAudio() {
+  if (fallbackTapAudio) {
+    return fallbackTapAudio;
+  }
+
+  const sampleRate = 22050;
+  const durationSec = 0.22;
+  const total = Math.floor(sampleRate * durationSec);
+  const samples = new Float32Array(total);
+
+  function env(t, a, d) {
+    if (t < 0) return 0;
+    if (t < a) return t / a;
+    return Math.max(0, 1 - (t - a) / d);
+  }
+
+  for (let i = 0; i < total; i += 1) {
+    const t = i / sampleRate;
+    const boop1 = Math.sin(2 * Math.PI * 380 * t) * env(t, 0.01, 0.07);
+    const boop2 = Math.sin(2 * Math.PI * 520 * (t - 0.05)) * env(t - 0.05, 0.01, 0.09);
+    samples[i] = (boop1 + boop2) * 0.25;
+  }
+
+  const wavBlob = encodeWavPcm16({ sampleRate, samples });
+  const url = URL.createObjectURL(wavBlob);
+  const audio = new Audio(url);
+  audio.preload = "auto";
+  fallbackTapAudio = audio;
+  return audio;
+}
+
 function playSnailTapSound() {
+  // Must stay gesture-synchronous on mobile: no awaits, no timers.
+  let didStart = false;
+
   try {
     const ctx = getAudioContext();
-    if (ctx.state === "suspended") {
+    if (ctx.state !== "running") {
+      // Don't await; on some browsers awaiting breaks the user-gesture chain.
       void ctx.resume();
     }
 
-    const t0 = ctx.currentTime;
-    const master = ctx.createGain();
-    master.gain.value = 0.14;
-    master.connect(ctx.destination);
+    if (ctx.state === "running") {
+      const t0 = ctx.currentTime + 0.001;
+      const master = ctx.createGain();
+      master.gain.value = 0.14;
+      master.connect(ctx.destination);
 
-    function boop(start, freqHz, duration) {
-      const osc = ctx.createOscillator();
-      const g = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(freqHz, start);
-      osc.frequency.exponentialRampToValueAtTime(freqHz * 1.22, start + duration * 0.35);
-      g.gain.setValueAtTime(0.0001, start);
-      g.gain.exponentialRampToValueAtTime(1, start + 0.012);
-      g.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-      osc.connect(g);
-      g.connect(master);
-      osc.start(start);
-      osc.stop(start + duration + 0.03);
+      function boop(start, freqHz, duration) {
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freqHz, start);
+        osc.frequency.exponentialRampToValueAtTime(freqHz * 1.22, start + duration * 0.35);
+        g.gain.setValueAtTime(0.0001, start);
+        g.gain.exponentialRampToValueAtTime(1, start + 0.012);
+        g.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+        osc.connect(g);
+        g.connect(master);
+        osc.start(start);
+        osc.stop(start + duration + 0.03);
+      }
+
+      boop(t0, 380, 0.072);
+      boop(t0 + 0.05, 520, 0.095);
+
+      master.gain.setValueAtTime(0.14, t0 + 0.2);
+      master.gain.linearRampToValueAtTime(0.0001, t0 + 0.24);
+      didStart = true;
     }
-
-    boop(t0, 380, 0.072);
-    boop(t0 + 0.05, 520, 0.095);
-
-    master.gain.setValueAtTime(0.14, t0 + 0.2);
-    master.gain.linearRampToValueAtTime(0.0001, t0 + 0.24);
   } catch {
-    // Web Audio may be unavailable; ignore.
+    // ignore; we'll try fallback below
+  }
+
+  if (didStart) {
+    return;
+  }
+
+  try {
+    const audio = getFallbackTapAudio();
+    audio.currentTime = 0;
+    void audio.play();
+  } catch {
+    // If audio is unavailable or blocked, ignore.
   }
 }
 
