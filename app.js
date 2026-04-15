@@ -7,7 +7,8 @@ const SNAIL_SIZE = 62;
 const CRAWL_SPEED = 14; // pixels per second
 const DASH_DURATION_MS = 340;
 const TAP_WINDOW_MS = 1300;
-const TAP_BURST_THRESHOLD = 3;
+const TAP_BURST_TAPS_MIN = 3;
+const TAP_BURST_TAPS_MAX = 9;
 const SLEEP_DURATION_MS = 3000;
 
 let audioCtx = null;
@@ -65,10 +66,17 @@ const state = {
   lastTick: performance.now(),
   nextWanderAt: performance.now() + 1800,
   tapTimes: [],
+  tapBurstTarget: null,
   dashing: false,
   sleeping: false,
   sleepTimer: null
 };
+
+function randomIntInclusive(min, max) {
+  const low = Math.ceil(min);
+  const high = Math.floor(max);
+  return Math.floor(Math.random() * (high - low + 1)) + low;
+}
 
 function randomHeading() {
   const angle = Math.random() * Math.PI * 2;
@@ -354,6 +362,7 @@ function triggerSleep() {
 
   const wakeHeading = { x: state.headingX, y: state.headingY };
   state.tapTimes = [];
+  state.tapBurstTarget = null;
 
   state.sleepTimer = setTimeout(() => {
     state.sleeping = false;
@@ -430,9 +439,14 @@ function registerTap() {
 
   const now = performance.now();
   state.tapTimes = state.tapTimes.filter((time) => now - time <= TAP_WINDOW_MS);
+
+  // If the rapid-tap streak broke, pick a fresh (fun) random target for this streak.
+  if (state.tapTimes.length === 0) {
+    state.tapBurstTarget = randomIntInclusive(TAP_BURST_TAPS_MIN, TAP_BURST_TAPS_MAX);
+  }
   state.tapTimes.push(now);
 
-  if (state.tapTimes.length >= TAP_BURST_THRESHOLD) {
+  if (state.tapBurstTarget && state.tapTimes.length >= state.tapBurstTarget) {
     triggerSleep();
     return;
   }
