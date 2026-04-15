@@ -104,7 +104,20 @@ function encodeWavPcm16({ sampleRate, samples }) {
     offset += 2;
   }
 
-  return new Blob([buffer], { type: "audio/wav" });
+  return new Uint8Array(buffer);
+}
+
+function base64FromBytes(bytes) {
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+}
+
+function wavBytesToDataUri(wavBytes) {
+  return `data:audio/wav;base64,${base64FromBytes(wavBytes)}`;
 }
 
 function chooseTapSoundIndex() {
@@ -157,9 +170,9 @@ function getFallbackTapAudio(variantIndex) {
     samples[i] = (b1 + b2) * 0.22;
   }
 
-  const wavBlob = encodeWavPcm16({ sampleRate, samples });
-  const url = URL.createObjectURL(wavBlob);
-  const audio = new Audio(url);
+  const wavBytes = encodeWavPcm16({ sampleRate, samples });
+  const dataUri = wavBytesToDataUri(wavBytes);
+  const audio = new Audio(dataUri);
   audio.preload = "auto";
   fallbackTapAudios[variantIndex] = audio;
   return audio;
