@@ -9,17 +9,21 @@
       content="A tiny mobile-first web toy where a cute snail slowly crawls around and zips away when tapped."
     />
     <meta name="lightsnail-source" content="github.com/apelosi/lightsnail" />
-    <link rel="stylesheet" href="./styles.css?v=2026-04-16-02" />
+    <link rel="stylesheet" href="./styles.css?v=2026-04-16-03" />
   </head>
   <body>
     <div class="app-shell">
       <header class="app-header">
-        <h1>Light Snail</h1>
-        <p>Tap the snail to make it zip with a light flash.</p>
-        <div class="controls" aria-label="Controls">
-          <button id="soundToggle" class="toggle" type="button" aria-pressed="false">
-            Sound: Off
-          </button>
+        <div class="app-header__top">
+          <div class="app-header__left">
+            <h1>Light Snail</h1>
+            <p id="status" class="status-text" aria-live="polite">Slow and shiny.</p>
+          </div>
+          <div class="controls" aria-label="Controls">
+            <button id="soundToggle" class="toggle" type="button" aria-pressed="false">
+              Sound: Off
+            </button>
+          </div>
         </div>
       </header>
 
@@ -32,13 +36,12 @@
         </button>
       </main>
 
-      <p id="status" class="status-text" aria-live="polite">Slow and shiny.</p>
       <p class="deploy-marker" id="deployMarker">
         Source: <span class="deploy-marker__repo">github.com/apelosi/lightsnail</span> · build marker
-        <span class="deploy-marker__id">2026-04-16-02</span>
+        <span class="deploy-marker__id">2026-04-16-03</span>
       </p>
     </div>
 
-    <script src="./app.js?v=2026-04-16-02"></script>
+    <script src="./app.js?v=2026-04-16-03"></script>
   </body>
 </html>
