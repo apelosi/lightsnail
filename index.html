@@ -8,7 +8,8 @@
       name="description"
       content="A tiny mobile-first web toy where a cute snail slowly crawls around and zips away when tapped."
     />
-    <link rel="stylesheet" href="./styles.css?v=2026-04-16-01" />
+    <meta name="lightsnail-source" content="github.com/apelosi/lightsnail" />
+    <link rel="stylesheet" href="./styles.css?v=2026-04-16-02" />
   </head>
   <body>
     <div class="app-shell">
@@ -32,8 +33,12 @@
       </main>
 
       <p id="status" class="status-text" aria-live="polite">Slow and shiny.</p>
+      <p class="deploy-marker" id="deployMarker">
+        Source: <span class="deploy-marker__repo">github.com/apelosi/lightsnail</span> · build marker
+        <span class="deploy-marker__id">2026-04-16-02</span>
+      </p>
     </div>
 
-    <script src="./app.js?v=2026-04-16-01"></script>
+    <script src="./app.js?v=2026-04-16-02"></script>
   </body>
 </html>
