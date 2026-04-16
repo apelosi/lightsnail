@@ -43,6 +43,45 @@ body {
   opacity: 0.85;
 }
 
+.controls {
+  margin-top: 0.7rem;
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.toggle {
+  appearance: none;
+  border: 1px solid rgba(64, 48, 66, 0.22);
+  background: rgba(255, 255, 255, 0.55);
+  color: inherit;
+  border-radius: 999px;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.9rem;
+  line-height: 1;
+  box-shadow: 0 6px 16px rgba(78, 32, 92, 0.12);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.toggle:hover {
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.toggle:active {
+  transform: translateY(1px);
+}
+
+.toggle[aria-pressed="true"] {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(64, 48, 66, 0.28);
+}
+
+.toggle:focus-visible {
+  outline: 3px solid rgba(255, 196, 108, 0.75);
+  outline-offset: 3px;
+}
+
 .stage {
   position: relative;
   width: 100%;
