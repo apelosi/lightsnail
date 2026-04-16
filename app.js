@@ -1,6 +1,7 @@
 const stageEl = document.getElementById("stage");
 const effectsEl = document.getElementById("effects");
 const snailEl = document.getElementById("snail");
+const soundToggleEl = document.getElementById("soundToggle");
 const statusEl = document.getElementById("status");
 
 const SNAIL_SIZE = 62;
@@ -16,6 +17,31 @@ let fallbackTapAudios = null;
 let lastTapSoundIndex = -1;
 let audioUnlocked = false;
 let audioBlockedNoticeShown = false;
+let soundEnabled = false;
+
+function readSoundEnabled() {
+  try {
+    return localStorage.getItem("snailSoundEnabled") === "true";
+  } catch {
+    return false;
+  }
+}
+
+function writeSoundEnabled(enabled) {
+  try {
+    localStorage.setItem("snailSoundEnabled", enabled ? "true" : "false");
+  } catch {
+    // ignore
+  }
+}
+
+function renderSoundToggle() {
+  if (!soundToggleEl) {
+    return;
+  }
+  soundToggleEl.setAttribute("aria-pressed", soundEnabled ? "true" : "false");
+  soundToggleEl.textContent = soundEnabled ? "Sound: On" : "Sound: Off";
+}
 
 const TAP_SOUND_VARIANTS = [
   { osc: "sine", f1: 330, d1: 0.07, f2: 470, d2: 0.09, gap: 0.048, glide: 1.18 },
@@ -179,6 +205,9 @@ function getFallbackTapAudio(variantIndex) {
 }
 
 function playSnailTapSound() {
+  if (!soundEnabled) {
+    return;
+  }
   // Must stay gesture-synchronous on mobile: no awaits, no timers.
   let didStart = false;
   const variantIndex = chooseTapSoundIndex();
@@ -626,8 +655,10 @@ function registerTap() {
     return;
   }
 
-  unlockAudioIfNeeded();
-  playSnailTapSound();
+  if (soundEnabled) {
+    unlockAudioIfNeeded();
+    playSnailTapSound();
+  }
 
   const now = performance.now();
   state.tapTimes = state.tapTimes.filter((time) => now - time <= TAP_WINDOW_MS);
@@ -680,6 +711,24 @@ function tick(now) {
 }
 
 function initialize() {
+  soundEnabled = readSoundEnabled(); // default false
+  renderSoundToggle();
+
+  if (soundToggleEl) {
+    soundToggleEl.addEventListener("click", () => {
+      soundEnabled = !soundEnabled;
+      writeSoundEnabled(soundEnabled);
+      renderSoundToggle();
+
+      if (soundEnabled) {
+        audioBlockedNoticeShown = false;
+        setStatus("Sound on. Tap the snail!");
+      } else {
+        setStatus("Sound off.");
+      }
+    });
+  }
+
   const { maxX, maxY } = stageBounds();
   const initialHeading = randomHeading();
   setHeading(initialHeading.x, initialHeading.y);
@@ -695,7 +744,6 @@ function initialize() {
 snailEl.addEventListener("pointerdown", (event) => {
   event.preventDefault();
   snailEl.blur();
-  unlockAudioIfNeeded();
   registerTap();
 });
 
