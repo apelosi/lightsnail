@@ -257,6 +257,20 @@ body {
   min-height: 1.25rem;
 }
 
+.deploy-marker {
+  margin: 0.35rem 0 0;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  text-align: center;
+  opacity: 0.55;
+  word-break: break-word;
+}
+
+.deploy-marker__repo,
+.deploy-marker__id {
+  font-variant-numeric: tabular-nums;
+}
+
 @keyframes snail-bob {
   0%,
   100% {
