@@ -14,6 +14,8 @@ const SLEEP_DURATION_MS = 3000;
 let audioCtx = null;
 let fallbackTapAudios = null;
 let lastTapSoundIndex = -1;
+let audioUnlocked = false;
+let audioBlockedNoticeShown = false;
 
 const TAP_SOUND_VARIANTS = [
   { osc: "sine", f1: 330, d1: 0.07, f2: 470, d2: 0.09, gap: 0.048, glide: 1.18 },
@@ -30,6 +32,43 @@ function getAudioContext() {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   }
   return audioCtx;
+}
+
+function unlockAudioIfNeeded() {
+  if (audioUnlocked) {
+    return;
+  }
+  audioUnlocked = true;
+
+  try {
+    const ctx = getAudioContext();
+    void ctx.resume();
+    // iOS/Safari sometimes needs an actual node start during a gesture to unlock.
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    g.gain.value = 0.00001;
+    osc.connect(g);
+    g.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.01);
+  } catch {
+    // ignore
+  }
+
+  try {
+    // Also try to unlock HTMLAudioElement playback.
+    const audio = getFallbackTapAudio(0);
+    audio.muted = true;
+    const playPromise = audio.play();
+    if (playPromise && typeof playPromise.catch === "function") {
+      playPromise.catch(() => {});
+    }
+    audio.pause();
+    audio.currentTime = 0;
+    audio.muted = false;
+  } catch {
+    // ignore
+  }
 }
 
 /** Soft rising “boop-boop” for each tap — short, snail-cute, no audio file needed. */
@@ -65,7 +104,20 @@ function encodeWavPcm16({ sampleRate, samples }) {
     offset += 2;
   }
 
-  return new Blob([buffer], { type: "audio/wav" });
+  return new Uint8Array(buffer);
+}
+
+function base64FromBytes(bytes) {
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+}
+
+function wavBytesToDataUri(wavBytes) {
+  return `data:audio/wav;base64,${base64FromBytes(wavBytes)}`;
 }
 
 function chooseTapSoundIndex() {
@@ -118,9 +170,9 @@ function getFallbackTapAudio(variantIndex) {
     samples[i] = (b1 + b2) * 0.22;
   }
 
-  const wavBlob = encodeWavPcm16({ sampleRate, samples });
-  const url = URL.createObjectURL(wavBlob);
-  const audio = new Audio(url);
+  const wavBytes = encodeWavPcm16({ sampleRate, samples });
+  const dataUri = wavBytesToDataUri(wavBytes);
+  const audio = new Audio(dataUri);
   audio.preload = "auto";
   fallbackTapAudios[variantIndex] = audio;
   return audio;
@@ -139,7 +191,8 @@ function playSnailTapSound() {
       void ctx.resume();
     }
 
-    if (ctx.state === "running") {
+    // Schedule even if currently suspended; it may begin once resume completes.
+    {
       const t0 = ctx.currentTime + 0.001;
       const master = ctx.createGain();
       master.gain.value = 0.14;
@@ -165,7 +218,7 @@ function playSnailTapSound() {
 
       master.gain.setValueAtTime(0.14, t0 + 0.2);
       master.gain.linearRampToValueAtTime(0.0001, t0 + 0.24);
-      didStart = true;
+      didStart = ctx.state === "running";
     }
   } catch {
     // ignore; we'll try fallback below
@@ -178,9 +231,21 @@ function playSnailTapSound() {
   try {
     const audio = getFallbackTapAudio(variantIndex);
     audio.currentTime = 0;
-    void audio.play();
+    const playPromise = audio.play();
+    if (playPromise && typeof playPromise.catch === "function") {
+      playPromise.catch(() => {
+        if (!audioBlockedNoticeShown) {
+          audioBlockedNoticeShown = true;
+          setStatus("Sound is blocked. Turn your volume up and disable Silent mode.");
+        }
+      });
+    }
   } catch {
     // If audio is unavailable or blocked, ignore.
+    if (!audioBlockedNoticeShown) {
+      audioBlockedNoticeShown = true;
+      setStatus("Sound is blocked. Turn your volume up and disable Silent mode.");
+    }
   }
 }
 
@@ -561,6 +626,7 @@ function registerTap() {
     return;
   }
 
+  unlockAudioIfNeeded();
   playSnailTapSound();
 
   const now = performance.now();
@@ -629,6 +695,7 @@ function initialize() {
 snailEl.addEventListener("pointerdown", (event) => {
   event.preventDefault();
   snailEl.blur();
+  unlockAudioIfNeeded();
   registerTap();
 });
 
